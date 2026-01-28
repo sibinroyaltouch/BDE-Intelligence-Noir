@@ -60,7 +60,7 @@ def get_vault_history():
 init_db()
 
 # --- 4. NOIR ELITE DESIGN SYSTEM (FORCED CONTRAST) ---
-st.set_page_config(page_title="ABI Command Noir Pro", layout="wide")
+st.set_page_config(page_title="Mr. BDE Pro", layout="wide")
 
 st.markdown("""
     <style>
@@ -209,8 +209,8 @@ with st.sidebar:
     elif admin_pw != "": st.error("Access Denied")
 
 # --- 7. FRONTEND DASHBOARD ---
-st.markdown("<h1 style='text-align:center; letter-spacing:15px; font-weight:900;'>ABI COMMAND NOIR</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#666666;'>Enterprise Strategic War Room Dossier • v30.0 Elite</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; letter-spacing:15px; font-weight:900;'>Mr. BDE</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#666666;'>Developed by Sibin Kalliyath | Version 2.0</p>", unsafe_allow_html=True)
 
 col_a, col_b = st.columns(2)
 with col_a: t_in = st.text_input("TARGET URL (PROSPECT)", placeholder="e.g. apple.com")
@@ -271,19 +271,19 @@ if st.button("Initiate Strategic Audit"):
         st.markdown('<div class="white-module">', unsafe_allow_html=True)
         st.markdown('<div class="module-title">Sales Execution Playbook</div>', unsafe_allow_html=True)
         
-        st.write("**📧 Professional Email Hook**")
+        st.write("** Professional Email Hook**")
         st.markdown(f"""<div class="script-block">
         "Hi [Name], I noticed {data['target']['name']}'s recent scale. Usually, firms growing this fast while leveraging legacy tools hit a bottleneck with <b>{data['target']['weakness']}</b>. <br><br>
         At <b>{data['me']['name']}</b>, we've helped similar firms bridge this specific gap with our <b>{data['me']['services'][0]}</b> suite. Do you have 2 minutes Tuesday?"
         </div>""", unsafe_allow_html=True)
         
-        st.write("**☎️ Tele-Calling Script**")
+        st.write("** Tele-Calling Script**")
         st.markdown(f"""<div class="script-block">
         "Hi [Name], it's [YourName] from {data['me']['name']}. I noticed you're scaling your team. 
         Most VPs I talk to say their biggest hurdle during growth is <b>{data['target']['weakness']}</b>. We've solved this—do you have a moment?"
         </div>""", unsafe_allow_html=True)
 
-        st.write("**📟 Voicemail Hook**")
+        st.write("** Voicemail Hook**")
         st.markdown(f"""<div class="script-block">
         "Hi [Name], I have a specific insight regarding {data['target']['name']}'s <b>{data['target']['weakness']}</b> and its impact on your 2026 goals. <br><br>
         I'll follow up with an email under the subject line: <b>{data['target']['name']} Strategy</b>."
