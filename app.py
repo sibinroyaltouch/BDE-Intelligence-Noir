@@ -166,7 +166,7 @@ with st.sidebar:
         st.error("Denied")
 
 # --- 6. FRONTEND LAYOUT ---
-st.markdown("<h1 class='main-title'>ABI COMMAND NOIR</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-title'>Mr. BDE V 2.0 (Developed by Sibinkalliyath)</h1>", unsafe_allow_html=True)
 st.markdown("<p class='main-subtitle'>Enterprise Strategic Intelligence War Room Dossier</p>", unsafe_allow_html=True)
 
 col_a, col_b = st.columns(2)
