@@ -70,7 +70,7 @@ def get_vault_history():
 init_db()
 
 # --- 4. NOIR DESIGN SYSTEM (Strict Black/White High Contrast) ---
-st.set_page_config(page_title="ABI Command Noir v20.0", layout="wide")
+st.set_page_config(page_title="Mr. BDE v20.0", layout="wide")
 
 st.markdown("""
     <style>
@@ -182,8 +182,8 @@ with st.sidebar:
     elif admin_password != "": st.error("Denied")
 
 # --- 7. FRONTEND PAGE LAYOUT ---
-st.markdown("<h1 class='main-title'>ABI COMMAND NOIR</h1>", unsafe_allow_html=True)
-st.markdown("<p class='main-subtitle'>Enterprise Strategic Intelligence • War Room Dossier v20.0</p>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-title'>Mr. BDE</h1>", unsafe_allow_html=True)
+st.markdown("<p class='main-subtitle'>Developed by Sibin Kalliyath | Version 2.0</p>", unsafe_allow_html=True)
 
 col_a, col_b = st.columns(2)
 with col_a: t_input = st.text_input("TARGET COMPANY URL", placeholder="e.g. google.com")
