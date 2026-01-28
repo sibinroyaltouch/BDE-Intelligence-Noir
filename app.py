@@ -244,7 +244,7 @@ with st.sidebar:
 
 # --- 7. FRONTEND DASHBOARD ---
 st.markdown("<h1 style='text-align:center; letter-spacing:15px; font-weight:900;'>Mr.BDE</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#666666;'>Powered by Alignment Matrix Logic | Version 3.0</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#666666;'>Developed by Sibin Kalliyath | Version 3.0</p>", unsafe_allow_html=True)
 
 col_a, col_b = st.columns(2)
 with col_a: t_in = st.text_input("TARGET URL (PROSPECT)", placeholder="e.g. apple.com")
