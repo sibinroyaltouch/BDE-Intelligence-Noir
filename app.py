@@ -27,15 +27,13 @@ def get_clean_name(url):
     parts = clean.split('.')
     return parts[0].capitalize() if parts else "Entity"
 
-# --- 3. DATABASE LOGIC (WITH AUTO-SCHEMA REPAIR) ---
+# --- 3. DATABASE LOGIC ---
 def init_db():
     conn = sqlite3.connect('intelligence.db')
     c = conn.cursor()
     try:
-        # Check if the columns exist
         c.execute("SELECT target_name, my_name FROM history LIMIT 1")
     except sqlite3.OperationalError:
-        # If the table is old/incorrect, reset it to fix the error
         c.execute("DROP TABLE IF EXISTS history")
         
     c.execute('''CREATE TABLE IF NOT EXISTS history 
@@ -62,17 +60,26 @@ def get_vault_history():
 init_db()
 
 # --- 4. NOIR ABSOLUTE DESIGN SYSTEM ---
-st.set_page_config(page_title="Strategic ABI Command", layout="wide")
+st.set_page_config(page_title="ABI Command Noir Pro", layout="wide")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
     
-    /* GLOBAL APP THEME (BLACK) */
+    /* GLOBAL BACKGROUND */
     .stApp { background-color: #000000 !important; font-family: 'Inter', sans-serif; }
+
+    /* TEXT COLORS OUTSIDE MODULES */
     h1, h2, h3, h4, p, label, span, div, .stMarkdown { color: #FFFFFF; }
 
-    /* THE MAIN SUBMIT BUTTON (WHITE BG, BLACK TEXT) */
+    /* INPUT FIELD STYLING */
+    .stTextInput>div>div>input {
+        background-color: #000000 !important;
+        color: #FFFFFF !important;
+        border: 1px solid #FFFFFF !important;
+    }
+
+    /* THE SUBMIT BUTTON (FORCE WHITE BG, BLACK TEXT) */
     .stButton>button {
         background-color: #FFFFFF !important;
         color: #000000 !important;
@@ -83,29 +90,17 @@ st.markdown("""
         padding: 25px !important;
         text-transform: uppercase !important;
         letter-spacing: 4px !important;
+        font-size: 1.2rem !important;
     }
-    .stButton>button p { color: #000000 !important; font-weight: 900 !important; }
-    .stButton>button:hover { background-color: #DDDDDD !important; }
-
-    /* WHITE MODULE BLOCKS (FORCE EVERYTHING INSIDE TO BLACK) */
-    .white-module {
-        background-color: #FFFFFF !important;
-        padding: 45px;
-        border-radius: 2px;
-        margin-bottom: 35px;
-    }
-    .white-module h1, .white-module h2, .white-module h3, .white-module h4, 
-    .white-module p, .white-module li, .white-module span, 
-    .white-module div, .white-module b, .white-module label, .white-module strong {
+    
+    /* Ensuring the text inside the button is black regardless of Streamlit overrides */
+    .stButton>button p {
         color: #000000 !important;
     }
-    .module-title {
-        font-size: 1.8rem; font-weight: 900; text-transform: uppercase;
-        border-bottom: 4px solid #000000; padding-bottom: 10px;
-        margin-bottom: 25px; color: #000000 !important;
-    }
+    
+    .stButton>button:hover { background-color: #DDDDDD !important; }
 
-    /* RESPONSIVE KPI GRID (FORCE BLACK TEXT ON WHITE) */
+    /* RESPONSIVE KPI GRID (WHITE BOXES / BLACK TEXT) */
     .kpi-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -116,18 +111,17 @@ st.markdown("""
         background-color: #FFFFFF !important;
         padding: 30px;
         text-align: center;
-        border-radius: 2px;
+        border-radius: 4px;
     }
-    /* FORCE KPI LABELS TO BLACK */
+    /* FORCE KPI LABELS & VALUES TO BLACK AS REQUESTED */
     .kpi-card h4 { 
         color: #000000 !important; 
         font-size: 0.8rem !important; 
-        font-weight: 800 !important; 
-        letter-spacing: 2px; 
+        font-weight: 700 !important; 
         text-transform: uppercase; 
+        letter-spacing: 2px;
         margin: 0 0 10px 0 !important;
     }
-    /* FORCE KPI VALUES (e.g. SECURED) TO BLACK */
     .kpi-card h2 { 
         color: #000000 !important; 
         font-size: 2rem !important; 
@@ -135,12 +129,28 @@ st.markdown("""
         margin: 0 !important;
     }
 
-    /* INPUTS */
-    .stTextInput>div>div>input { background-color: #000000 !important; color: #FFFFFF !important; border: 1px solid #FFFFFF !important; }
-    
-    /* SCRIPT BLOCKS */
+    /* DATA MODULES (WHITE BOXES / BLACK TEXT) */
+    .white-module {
+        background-color: #FFFFFF !important;
+        padding: 45px;
+        margin-bottom: 40px;
+        border-radius: 4px;
+    }
+    .white-module h1, .white-module h2, .white-module h3, .white-module h4, 
+    .white-module p, .white-module li, .white-module span, 
+    .white-module div, .white-module b, .white-module label, .white-module strong {
+        color: #000000 !important;
+    }
+
+    .module-title {
+        font-size: 1.8rem; font-weight: 900; 
+        text-transform: uppercase; border-bottom: 4px solid #000000; 
+        padding-bottom: 12px; margin-bottom: 30px; color: #000000 !important;
+    }
+
+    /* SCRIPT BLOCKS (GRAYISH BG INSIDE WHITE MODULE) */
     .script-block {
-        background-color: #F5F5F5;
+        background-color: #F2F2F2;
         border: 1px solid #000000;
         padding: 25px;
         font-family: 'Courier New', monospace;
@@ -150,7 +160,7 @@ st.markdown("""
     }
 
     .block-container { max-width: 1250px; padding-top: 3rem; margin: auto; }
-    [data-testid="stSidebar"] { background-color: #111111 !important; color: white !important; }
+    [data-testid="stSidebar"] { background-color: #111111 !important; color: white !important; border-right: 1px solid #333333; }
     #MainMenu, footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
@@ -181,37 +191,37 @@ class TitanIntelligence:
         tech_list = ["Salesforce", "AWS", "HubSpot", "Zendesk", "Shopify", "WordPress", "Oracle", "SAP"]
         found_tech = [x for x in tech_list if x.lower() in t_data['html']]
         
-        # Self-Service Logic
-        my_offer_keys = {"Cloud Transformation": ["aws", "cloud", "devops"], "AI Engineering": ["ai", "machine"], "Cybersecurity": ["security", "soc"], "CRM Acceleration": ["salesforce", "hubspot"]}
-        my_strengths = [k for k, v in my_offer_keys.items() if any(x in m_data['text'] for x in v)]
+        # Self-Offering Logic
+        offer_map = {"Cloud": ["aws", "cloud", "devops"], "AI": ["ai", "machine"], "Cyber": ["security", "soc"], "CRM": ["salesforce", "hubspot"]}
+        my_strengths = [k for k, v in offer_map.items() if any(x in m_data['text'] for x in v)]
         
         return {
             "target": {
                 "name": t_name,
-                "industry": "High-Tech / Enterprise" if "platform" in t_data['text'] else "Commercial Services",
+                "industry": "Enterprise Tech / SaaS" if "platform" in t_data['text'] else "Commercial Services",
                 "tech": found_tech,
-                "hiring": "Growth Mode" if "career" in t_data['html'] else "Stable",
-                "weakness": "Operational Scale Friction"
+                "hiring": "Growth-Active" if "career" in t_data['html'] else "Stable Operations",
+                "weakness": "Operational Scale Gap"
             },
-            "me": {"name": m_name, "services": my_strengths if my_strengths else ["Digital Business Strategic Growth"], "url": self.my_url}
+            "me": {"name": m_name, "services": my_strengths if my_strengths else ["Strategic Digital Growth"], "url": self.my_url}
         }
 
 # --- 6. SIDEBAR ---
 with st.sidebar:
     st.markdown("<h2 style='color:white;'>🛡️ ADMIN VAULT</h2>", unsafe_allow_html=True)
-    admin_pw = st.text_input("Access Key", type="password")
+    admin_pw = st.text_input("Vault Access Key", type="password")
     if admin_pw == "Sibin@8129110807":
         st.success("Authorized")
         st.dataframe(get_vault_history())
     elif admin_pw != "": st.error("Access Denied")
 
 # --- 7. FRONTEND DASHBOARD ---
-st.markdown("<h1 style='text-align:center; letter-spacing:12px; font-weight:900;'>ABI COMMAND NOIR</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#666666;'>Enterprise Strategic Intelligence War Room Dossier • v28.0</p>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-title'>ABI COMMAND NOIR</h1>", unsafe_allow_html=True)
+st.markdown("<p class='main-subtitle'>Enterprise Strategic War Room Dossier • v28.0 Noir Command</p>", unsafe_allow_html=True)
 
 col_a, col_b = st.columns(2)
-with col_a: t_in = st.text_input("TARGET COMPANY URL", placeholder="e.g. google.com")
-with col_b: m_in = st.text_input("YOUR COMPANY URL", placeholder="e.g. salesforce.com")
+with col_a: t_in = st.text_input("TARGET URL (PROSPECT)", placeholder="e.g. apple.com")
+with col_b: m_in = st.text_input("YOUR COMPANY URL (e.g. salesforce.com)", value="https://")
 
 if st.button("Initiate Strategic Audit"):
     engine = TitanIntelligence(t_in, m_in)
@@ -220,7 +230,7 @@ if st.button("Initiate Strategic Audit"):
         if data: save_to_vault(data['target']['name'], data['me']['name'])
     
     if data:
-        # --- KPI GRID (FORCED PURE BLACK TEXT ON WHITE) ---
+        # --- KPI GRID (FORCED BLACK TEXT ON WHITE) ---
         st.markdown(f"""
             <div class="kpi-grid">
                 <div class="kpi-card"><h4>Lead Status</h4><h2>High Priority</h2></div>
@@ -230,12 +240,12 @@ if st.button("Initiate Strategic Audit"):
             </div>
         """, unsafe_allow_html=True)
 
-        # --- MODULE 1: THE BRIDGE ---
+        # --- MODULE 1: STRATEGIC BRIDGE ---
         st.markdown(f"""
             <div class="white-module">
                 <div class="module-title">Strategic Bridge: {data['me']['name']} → {data['target']['name']}</div>
-                <p><b>Executive Brief:</b> {data['target']['name']} is scaling their <b>{data['target']['hiring']}</b> phase but is currently hindered by <b>{data['target']['weakness']}</b>.</p>
-                <p><b>Alignment:</b> As <b>{data['me']['name']}</b> is an expert in <b>{data['me']['services'][0]}</b>, your strength is the direct solution to their weakness.</p>
+                <p><b>Executive Brief:</b> {data['target']['name']} is scaling during a <b>{data['target']['hiring']}</b> phase but is currently hindered by <b>{data['target']['weakness']}</b>.</p>
+                <p><b>Value Prop:</b> As <b>{data['me']['name']}</b> is an expert in <b>{data['me']['services'][0]}</b>, your strength is the direct solution to their weakness.</p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -245,14 +255,14 @@ if st.button("Initiate Strategic Audit"):
         p1, p2 = st.columns(2)
         with p1:
             st.write(f"**Entity Name:** {data['target']['name']}")
-            st.write(f"**Market Sector:** {data['target']['industry']}")
+            st.write(f"**Industry Vertical:** {data['target']['industry']}")
             st.write(f"**Hiring Posture:** {data['target']['hiring']}")
         with p2:
-            st.write("**Identified Tech:** " + (", ".join(data['target']['tech']) if data['target']['tech'] else "Custom Stack"))
+            st.write("**Identified Tech:** " + (", ".join(data['target']['tech']) if data['target']['tech'] else "Custom Infrastructure"))
             st.write(f"**Primary Loophole:** {data['target']['weakness']}")
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # --- MODULE 3: LINKEDIN RADAR ---
+        # --- MODULE 3: STAKEHOLDER RADAR ---
         st.markdown('<div class="white-module">', unsafe_allow_html=True)
         st.markdown('<div class="module-title">LinkedIn Stakeholder Radar</div>', unsafe_allow_html=True)
         roles = ["CTO", "VP Operations", "Head of Digital Transformation", "COO"]
@@ -268,9 +278,9 @@ if st.button("Initiate Strategic Audit"):
         st.markdown('<div class="white-module">', unsafe_allow_html=True)
         st.markdown('<div class="module-title">Sales Execution Playbook</div>', unsafe_allow_html=True)
         
-        st.write("**📧 Email Hook**")
+        st.write("**📧 Professional Email Hook**")
         st.markdown(f"""<div class="script-block">
-        Subject: Question regarding {data['target']['name']}'s scaling roadmap<br><br>
+        Subject: Question regarding {data['target']['name']}'s {data['target']['hiring'].split()[0]} roadmap<br><br>
         "Hi [Name], I noticed {data['target']['name']}'s recent scale. Usually, firms growing this fast while leveraging legacy tools hit a bottleneck with <b>{data['target']['weakness']}</b>. <br><br>
         At <b>{data['me']['name']}</b>, we've helped similar firms bridge this gap. Do you have 2 minutes Tuesday?"
         </div>""", unsafe_allow_html=True)
@@ -284,7 +294,7 @@ if st.button("Initiate Strategic Audit"):
         st.write("**📟 Voicemail Hook**")
         st.markdown(f"""<div class="script-block">
         "Hi [Name], I have a specific insight regarding {data['target']['name']}'s <b>{data['target']['weakness']}</b> and its impact on your 2026 goals. <br><br>
-        I'll follow up with an email under subject line: <b>{data['target']['name']} Strategy</b>."
+        I'll follow up with an email under the subject line: <b>{data['target']['name']} Strategy</b>."
         </div>""", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
