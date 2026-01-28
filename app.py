@@ -27,7 +27,7 @@ def get_clean_name(url):
     parts = clean.split('.')
     return parts[0].capitalize() if parts else "Entity"
 
-# --- 3. DATABASE LOGIC (WITH AUTO-SCHEMA REPAIR) ---
+# --- 3. DATABASE LOGIC ---
 def init_db():
     conn = sqlite3.connect('intelligence.db')
     c = conn.cursor()
@@ -70,7 +70,7 @@ st.markdown("""
     .stApp { background-color: #000000 !important; font-family: 'Inter', sans-serif; }
     h1, h2, h3, h4, p, label, span, div, .stMarkdown { color: #FFFFFF; }
 
-    /* KPI GRID: BLACK BACKGROUND AND WHITE TEXT (REQUESTED CHANGE) */
+    /* KPI GRID */
     .kpi-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -82,10 +82,10 @@ st.markdown("""
         padding: 30px;
         text-align: center;
         border-radius: 4px;
-        border: 1px solid #FFFFFF !important; /* White border to define the black box */
+        border: 1px solid #FFFFFF !important;
     }
     .kpi-card h4 { 
-        color: #888888 !important; /* Dimmed label */
+        color: #888888 !important; 
         font-size: 0.8rem !important; 
         font-weight: 700 !important; 
         text-transform: uppercase; 
@@ -99,7 +99,7 @@ st.markdown("""
         margin: 0 !important;
     }
 
-    /* SUBMIT BUTTON: WHITE BACKGROUND AND BOLD BLACK TEXT (REQUESTED) */
+    /* SUBMIT BUTTON */
     div.stButton > button {
         background-color: #FFFFFF !important;
         color: #000000 !important;
@@ -113,14 +113,10 @@ st.markdown("""
         font-size: 1.2rem !important;
     }
     
-    /* Ensure the button text stays black on all systems */
-    div.stButton > button p {
-        color: #000000 !important;
-        font-weight: 900 !important;
-    }
+    div.stButton > button p { color: #000000 !important; font-weight: 900 !important; }
     div.stButton > button:hover { background-color: #DDDDDD !important; }
 
-    /* WHITE MODULES: KEEPING BLACK TEXT FOR DOSSIER MODULES */
+    /* WHITE MODULES */
     .white-module {
         background-color: #FFFFFF !important;
         padding: 45px;
@@ -138,7 +134,7 @@ st.markdown("""
         margin-bottom: 25px; color: #000000 !important;
     }
 
-    /* INPUT FIELD STYLING */
+    /* INPUTS */
     .stTextInput>div>div>input { background-color: #000000 !important; color: #FFFFFF !important; border: 1px solid #FFFFFF !important; }
     
     /* SCRIPT BLOCKS */
@@ -158,12 +154,25 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 5. INTELLIGENCE ENGINE ---
+# --- 5. INTELLIGENCE ENGINE (ALIGNMENT MATRIX LOGIC) ---
 class TitanIntelligence:
     def __init__(self, target_url, my_url):
         self.target_url = target_url if target_url.startswith("http") else f"https://{target_url}"
         self.my_url = my_url if my_url.startswith("http") else f"https://{my_url}"
         self.headers = {'User-Agent': 'Mozilla/5.0'}
+        
+        # THE ALIGNMENT MATRIX: Maps Tech to Pain Points and My Matching Keywords
+        self.ALIGNMENT_MATRIX = {
+            "Salesforce": {"pain": "CRM Adoption Fatigue", "match_keys": ["crm", "salesforce", "sales ops", "pipeline"]},
+            "AWS": {"pain": "Cloud Cost Leakage", "match_keys": ["cloud", "aws", "infrastructure", "devops", "optimization"]},
+            "HubSpot": {"pain": "Inbound Pipeline Friction", "match_keys": ["marketing automation", "hubspot", "lead gen", "inbound"]},
+            "Zendesk": {"pain": "Customer Experience Lag", "match_keys": ["customer success", "support", "helpdesk", "cx"]},
+            "Shopify": {"pain": "E-commerce Conversion Drop", "match_keys": ["e-commerce", "shopify", "retail", "online store"]},
+            "WordPress": {"pain": "CMS Performance Bloat", "match_keys": ["web development", "modernization", "security", "wordpress"]},
+            "Oracle": {"pain": "Legacy Database Rigidity", "match_keys": ["database", "data engineering", "migration", "analytics"]},
+            "SAP": {"pain": "ERP Process Fragmentation", "match_keys": ["erp", "sap", "automation", "process audit"]},
+            "ServiceNow": {"pain": "ITSM Service Silos", "match_keys": ["itsm", "servicenow", "workflow automation"]}
+        }
 
     def fetch(self, url):
         try:
@@ -180,23 +189,48 @@ class TitanIntelligence:
         t_name = get_clean_name(self.target_url)
         m_name = get_clean_name(self.my_url)
 
-        # Tech Identification
-        tech_list = ["Salesforce", "AWS", "HubSpot", "Zendesk", "Shopify", "WordPress", "Oracle", "SAP", "ServiceNow"]
-        found_tech = [x for x in tech_list if x.lower() in t_data['html']]
+        # 1. Identify Tech on Target
+        found_techs = [tech for tech in self.ALIGNMENT_MATRIX.keys() if tech.lower() in t_data['html']]
         
-        # Self-Service Logic
-        my_offer_keys = {"Cloud Engineering": ["aws", "cloud", "devops"], "AI/Automation": ["ai", "machine", "automation"], "Cybersecurity": ["security", "soc"], "CRM Acceleration": ["salesforce", "hubspot"]}
-        my_strengths = [k for k, v in my_offer_keys.items() if any(x in m_data['text'] for x in v)]
-        
+        # 2. Logic: Pick Primary Trigger and Match with My Site
+        trigger_tech = "General Infrastructure"
+        primary_pain = "Operational Inefficiency"
+        matched_service = "Strategic Modernization"
+
+        for tech in found_techs:
+            # Check if my site mentions keywords related to this tech's pain solution
+            matrix_entry = self.ALIGNMENT_MATRIX[tech]
+            if any(key in m_data['text'] for key in matrix_entry['match_keys']):
+                trigger_tech = tech
+                primary_pain = matrix_entry['pain']
+                # Pick the first keyword found on my site as the matched service
+                for key in matrix_entry['match_keys']:
+                    if key in m_data['text']:
+                        matched_service = key.title()
+                        break
+                break # Stop at first strong match
+
+        # 3. Scrape Target Careers (Firmographics)
+        career_text = ""
+        for a in t_data['soup'].find_all('a', href=True):
+            if any(x in a['href'].lower() for x in ['career', 'job']):
+                c_res = self.fetch(urljoin(self.target_url, a['href']))
+                if c_res: career_text = c_res['text']
+                break
+
         return {
             "target": {
                 "name": t_name,
                 "industry": "High-Tech / SaaS" if "platform" in t_data['text'] else "Commercial Services",
-                "tech": found_tech,
-                "hiring": "Growth-Active" if "career" in t_data['html'] else "Stable",
-                "weakness": "Operational Scale Friction"
+                "tech": found_techs,
+                "trigger_tech": trigger_tech,
+                "pain_point": primary_pain,
+                "hiring": "Growth-Active" if len(career_text) > 1000 else "Stable"
             },
-            "me": {"name": m_name, "services": my_strengths if my_strengths else ["Strategic Modernization"], "url": self.my_url}
+            "me": {
+                "name": m_name, 
+                "matched_service": matched_service
+            }
         }
 
 # --- 6. SIDEBAR ---
@@ -210,35 +244,35 @@ with st.sidebar:
 
 # --- 7. FRONTEND DASHBOARD ---
 st.markdown("<h1 style='text-align:center; letter-spacing:15px; font-weight:900;'>Mr.BDE</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#666666;'>Developed by Sibin Kalliyath | Version 2.0</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#666666;'>Powered by Alignment Matrix Logic | Version 3.0</p>", unsafe_allow_html=True)
 
 col_a, col_b = st.columns(2)
 with col_a: t_in = st.text_input("TARGET URL (PROSPECT)", placeholder="e.g. apple.com")
-with col_b: m_in = st.text_input("MY URL (COMPANY)", placeholder="e.g. salesforce.com")
+with col_b: m_in = st.text_input("YOUR COMPANY URL (VENDOR)", placeholder="e.g. salesforce.com")
 
 if st.button("Initiate Strategic Audit"):
     engine = TitanIntelligence(t_in, m_in)
-    with st.spinner("EXECUTING SECURE CRAWL..."):
+    with st.spinner("EXECUTING ALIGNMENT MATRIX SCAN..."):
         data = engine.analyze()
         if data: save_to_vault(data['target']['name'], data['me']['name'])
     
     if data:
-        # --- KPI GRID (BLACK BACKGROUND / WHITE TEXT - AS REQUESTED) ---
+        # --- KPI GRID ---
         st.markdown(f"""
             <div class="kpi-grid">
-               <div class="kpi-card"><h4>Lead Status</h4><h2>High Priority</h2></div>
-                <div class="kpi-card"><h4>Target Account</h4><h2>{data['target']['name']}</h2></div>
-                <div class="kpi-card"><h4>Industry</h4><h2>{data['target']['industry']}</h2></div>
-                <div class="kpi-card"><h4>Vault</h4><h2>Logged</h2></div> 
+                <div class="kpi-card"><h4>Lead Status</h4><h2>High Priority</h2></div>
+                <div class="kpi-card"><h4>Trigger Tech</h4><h2>{data['target']['trigger_tech']}</h2></div>
+                <div class="kpi-card"><h4>Primary Pain</h4><h2>{data['target']['pain_point']}</h2></div>
+                <div class="kpi-card"><h4>Match Strength</h4><h2>Strong</h2></div>
             </div>
         """, unsafe_allow_html=True)
 
         # --- MODULE 1: STRATEGIC BRIDGE ---
         st.markdown(f"""
             <div class="white-module">
-                <div class="module-title">Strategic Bridge: {data['me']['name']} → {data['target']['name']}</div>
-                <p><b>Executive Observation:</b> {data['target']['name']} is scaling during a <b>{data['target']['hiring']}</b> phase but is currently hindered by <b>{data['target']['weakness']}</b>.</p>
-                <p><b>Solution Fit:</b> As <b>{data['me']['name']}</b> is an expert in <b>{data['me']['services'][0]}</b>, your strength is the direct solution to their weakness.</p>
+                <div class="module-title">Alignment Summary: {data['me']['name']} → {data['target']['name']}</div>
+                <p><b>Executive Observation:</b> We detected <b>{data['target']['trigger_tech']}</b> on the prospect's site, which typically correlates with <b>{data['target']['pain_point']}</b>.</p>
+                <p><b>Solution Fit:</b> Your site explicitly mentions <b>{data['me']['matched_service']}</b>, creating a direct competitive advantage for this account.</p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -248,17 +282,17 @@ if st.button("Initiate Strategic Audit"):
         p1, p2 = st.columns(2)
         with p1:
             st.write(f"**Entity Name:** {data['target']['name']}")
-            st.write(f"**Industry Sector:** {data['target']['industry']}")
+            st.write(f"**Sector:** {data['target']['industry']}")
             st.write(f"**Hiring Posture:** {data['target']['hiring']}")
         with p2:
-            st.write("**Internal Tech Stack:** " + (", ".join(data['target']['tech']) if data['target']['tech'] else "Custom Infrastructure"))
-            st.write(f"**Operational Gap:** {data['target']['weakness']}")
+            st.write("**Identified Stack:** " + (", ".join(data['target']['tech']) if data['target']['tech'] else "Custom Systems"))
+            st.write(f"**Pain Point identified:** {data['target']['pain_point']}")
         st.markdown('</div>', unsafe_allow_html=True)
 
         # --- MODULE 3: LINKEDIN STAKEHOLDER RADAR ---
         st.markdown('<div class="white-module">', unsafe_allow_html=True)
         st.markdown('<div class="module-title">LinkedIn Stakeholder Radar</div>', unsafe_allow_html=True)
-        roles = ["CTO", "VP Operations", "Head of Digital Transformation", "COO"]
+        roles = ["CTO", "VP Operations", "Head of Digital Transformation", "Sales Director"]
         r_cols = st.columns(4)
         for i, r in enumerate(roles):
             with r_cols[i]:
@@ -267,26 +301,28 @@ if st.button("Initiate Strategic Audit"):
                 st.markdown(f'<a href="https://www.linkedin.com/search/results/people/?keywords={q}" target="_blank" style="color:blue!important; text-decoration:underline; font-weight:bold;">🔍 Search LinkedIn</a>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # --- MODULE 4: SALES PLAYBOOK ---
+        # --- MODULE 4: SALES PLAYBOOK (DYNAMIC SCRIPTS) ---
         st.markdown('<div class="white-module">', unsafe_allow_html=True)
         st.markdown('<div class="module-title">Sales Execution Playbook</div>', unsafe_allow_html=True)
         
-        st.write("** Professional Email Hook**")
+        st.write("**📧 High-Impact Email Script**")
         st.markdown(f"""<div class="script-block">
-        "Hi [Name], I noticed {data['target']['name']}'s recent scale. Usually, firms growing this fast while leveraging legacy tools hit a bottleneck with <b>{data['target']['weakness']}</b>. <br><br>
-        At <b>{data['me']['name']}</b>, we've helped similar firms bridge this specific gap with our <b>{data['me']['services'][0]}</b> suite. Do you have 2 minutes Tuesday?"
+        Subject: Question regarding {data['target']['name']}'s {data['target']['trigger_tech']} ecosystem<br><br>
+        "Hi [Name], I noticed {data['target']['name']} is currently leveraging <b>{data['target']['trigger_tech']}</b> as part of your digital roadmap.<br><br>
+        Usually, firms at your scale experience <b>{data['target']['pain_point']}</b> when managing these systems. <br><br>
+        At <b>{data['me']['name']}</b>, we specialize in <b>{data['me']['matched_service']}</b> to eliminate this specific friction. Do you have 2 minutes Tuesday?"
         </div>""", unsafe_allow_html=True)
         
-        st.write("** Tele-Calling Script**")
+        st.write("**☎️ Tele-Calling Script**")
         st.markdown(f"""<div class="script-block">
-        "Hi [Name], it's [YourName] from {data['me']['name']}. I noticed you're scaling your team. 
-        Most VPs I talk to say their biggest hurdle during growth is <b>{data['target']['weakness']}</b>. We've solved this—do you have a moment?"
+        "Hi [Name], it's [YourName] from {data['me']['name']}. I noticed you're using <b>{data['target']['trigger_tech']}</b> and are currently in a <b>{data['target']['hiring']}</b> phase. 
+        Most VPs I talk to say their biggest hurdle with that stack is <b>{data['target']['pain_point']}</b>. We've solved this—do you have a moment?"
         </div>""", unsafe_allow_html=True)
 
-        st.write("** Voicemail Hook**")
+        st.write("**📟 Voicemail Hook**")
         st.markdown(f"""<div class="script-block">
-        "Hi [Name], I have a specific insight regarding {data['target']['name']}'s <b>{data['target']['weakness']}</b> and its impact on your 2026 goals. <br><br>
-        I'll follow up with an email under the subject line: <b>{data['target']['name']} Strategy</b>."
+        "Hi [Name], I have a specific insight regarding {data['target']['name']}'s <b>{data['target']['trigger_tech']}</b> setup and how to solve the <b>{data['target']['pain_point']}</b> many firms face. <br><br>
+        I'll follow up with an email under the subject: <b>{data['target']['name']} Strategy</b>."
         </div>""", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
