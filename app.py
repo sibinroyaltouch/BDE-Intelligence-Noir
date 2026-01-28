@@ -60,7 +60,7 @@ def get_vault_history():
 init_db()
 
 # --- 4. NOIR ELITE DESIGN SYSTEM (FORCED CONTRAST) ---
-st.set_page_config(page_title="Mr. BDE Pro", layout="wide")
+st.set_page_config(page_title="Mr.BDE Pro", layout="wide")
 
 st.markdown("""
     <style>
@@ -209,7 +209,7 @@ with st.sidebar:
     elif admin_pw != "": st.error("Access Denied")
 
 # --- 7. FRONTEND DASHBOARD ---
-st.markdown("<h1 style='text-align:center; letter-spacing:15px; font-weight:900;'>Mr. BDE</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; letter-spacing:15px; font-weight:900;'>Mr.BDE</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; color:#666666;'>Developed by Sibin Kalliyath | Version 2.0</p>", unsafe_allow_html=True)
 
 col_a, col_b = st.columns(2)
