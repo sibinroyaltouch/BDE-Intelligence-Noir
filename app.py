@@ -233,7 +233,7 @@ if st.button("Initiate Strategic Audit"):
             <font colour = black>    <div class="kpi-card"><h4>Lead Status</h4><h2>High Priority</h2></div>
                 <div class="kpi-card"><h4>Target Account</h4><h2>{data['target']['name']}</h2></div>
                 <div class="kpi-card"><h4>Industry</h4><h2>{data['target']['industry']}</h2></div>
-                <div class="kpi-card"><h4>Vault</h4><h2>Logged</h2></div> </font>
+                <div class="kpi-card"><h4>Vault</h4><h2>Logged</h2></div> 
             </div>
         """, unsafe_allow_html=True)
 
