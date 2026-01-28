@@ -212,7 +212,7 @@ class TitanIntelligence:
 
 # --- 4. DASHBOARD FRONTEND ---
 
-st.markdown("<h1 class='main-title'>ABI COMMAND NOIR</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-title'>Sibin APP V 2.O</h1>", unsafe_allow_html=True)
 st.markdown("<p class='main-subtitle'>Enterprise Strategic Intelligence • Strategic War Room Dossier</p>", unsafe_allow_html=True)
 
 # Dual Inputs
