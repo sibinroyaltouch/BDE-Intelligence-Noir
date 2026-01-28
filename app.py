@@ -19,39 +19,48 @@ import re
 import urllib.parse
 from urllib.parse import urljoin
 
-# --- 2. DATABASE LOGIC (THE BACKEND) ---
+# --- 2. SECURE DATABASE LOGIC (THE BACKEND) ---
 def init_db():
     conn = sqlite3.connect('intelligence.db')
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS history 
+    # Created a new table 'vault_logs' to handle the new URL tracking structure
+    c.execute('''CREATE TABLE IF NOT EXISTS vault_logs 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                  target_name TEXT, 
-                  target_url TEXT,
-                  my_company TEXT, 
+                  target_url TEXT, 
+                  my_url TEXT, 
                   timestamp TEXT)''')
     conn.commit()
     conn.close()
 
-def save_to_vault(target_name, target_url, my_company):
+def save_to_vault(target_url, my_url):
     conn = sqlite3.connect('intelligence.db')
     c = conn.cursor()
+    # Capturing exact date and time
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    c.execute("INSERT INTO history (target_name, target_url, my_company, timestamp) VALUES (?, ?, ?, ?)", 
-              (target_name, target_url, my_company, now))
+    c.execute("INSERT INTO vault_logs (target_url, my_url, timestamp) VALUES (?, ?, ?)", 
+              (target_url, my_url, now))
     conn.commit()
     conn.close()
 
 def get_vault_history():
     conn = sqlite3.connect('intelligence.db')
-    df = pd.read_sql_query("SELECT timestamp as 'Date/Time', target_name as 'Target Company', target_url as 'Target URL', my_company as 'Your Company' FROM history ORDER BY id DESC", conn)
+    # Fetching the raw data
+    df = pd.read_sql_query("SELECT timestamp, target_url, my_url FROM vault_logs ORDER BY id DESC", conn)
     conn.close()
+    
+    if not df.empty:
+        # Formatting the columns exactly as requested: Date | Time | Target URL | My URL
+        df['Date'] = pd.to_datetime(df['timestamp']).dt.strftime('%Y-%m-%d')
+        df['Time'] = pd.to_datetime(df['timestamp']).dt.strftime('%H:%M:%S')
+        df = df[['Date', 'Time', 'target_url', 'my_url']]
+        df.columns = ['Date', 'Time', 'Targeted Company URL', 'My Company URL']
     return df
 
 # Initialize DB on Startup
 init_db()
 
 # --- 3. THE NOIR DESIGN SYSTEM ---
-st.set_page_config(page_title="ABI Command Noir v17.0", layout="wide")
+st.set_page_config(page_title="ABI Command Noir v17.5", layout="wide")
 
 st.markdown("""
     <style>
@@ -60,14 +69,12 @@ st.markdown("""
     .main-title { text-align: center; letter-spacing: 12px; font-weight: 900; color: #FFFFFF !important; margin-bottom: 5px; }
     .main-subtitle { text-align: center; color: #888888 !important; font-size: 0.9rem; margin-bottom: 40px; }
 
-    /* Button Styling: White background, Black text */
+    /* Button Styling */
     .stButton>button {
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-        font-weight: 900 !important;
-        border-radius: 2px !important;
-        width: 100%; border: none !important;
-        padding: 20px !important; text-transform: uppercase; letter-spacing: 3px;
+        background-color: #FFFFFF !important; color: #000000 !important;
+        font-weight: 900 !important; border-radius: 2px !important;
+        width: 100%; border: none !important; padding: 20px !important; 
+        text-transform: uppercase; letter-spacing: 3px;
     }
 
     /* Input boxes */
@@ -77,10 +84,9 @@ st.markdown("""
     .white-module { background-color: #FFFFFF !important; padding: 45px; margin-bottom: 40px; }
     .white-module h1, .white-module h2, .white-module h3, .white-module h4, .white-module p, 
     .white-module li, .white-module span, .white-module div, .white-module b { color: #000000 !important; }
-
     .module-title { font-size: 1.8rem; font-weight: 900; text-transform: uppercase; border-bottom: 3px solid #000000; padding-bottom: 10px; margin-bottom: 30px; }
 
-    /* KPI Bar - High Contrast White with Black Text */
+    /* KPI Bar */
     .kpi-container { display: flex; justify-content: space-around; background-color: #FFFFFF !important; padding: 35px; margin-bottom: 40px; text-align: center; }
     .kpi-item h4 { color: #000000 !important; font-size: 0.75rem !important; font-weight: 700 !important; letter-spacing: 2px; margin-bottom: 5px; text-transform: uppercase; }
     .kpi-item h2 { color: #000000 !important; font-size: 2.2rem !important; font-weight: 900 !important; margin: 0; }
@@ -113,10 +119,10 @@ class TitanIntelligence:
         m_data = self.fetch(self.my_url)
         if not t_data or not m_data: return None
 
-        my_offer_keys = {"Cloud": ["aws", "cloud"], "AI": ["ai", "machine"], "Cyber": ["security"], "CRM": ["salesforce", "hubspot"]}
+        my_offer_keys = {"Cloud & DevOps": ["aws", "cloud", "azure"], "AI & Automation": ["ai", "machine", "intelligence"], "Cybersecurity": ["security", "threat"], "CRM Tech": ["salesforce", "hubspot"]}
         my_strengths = [k for k, v in my_offer_keys.items() if any(x in m_data['text'] for x in v)]
         
-        tech_list = ["Salesforce", "AWS", "HubSpot", "Zendesk", "Shopify", "WordPress"]
+        tech_list = ["Salesforce", "AWS", "HubSpot", "Zendesk", "Shopify", "WordPress", "React"]
         found_tech = [x for x in tech_list if x.lower() in t_data['html']]
         
         return {
@@ -126,7 +132,11 @@ class TitanIntelligence:
                 "tech": found_tech,
                 "url": self.target_url
             },
-            "me": {"name": self.my_url.split('.')[1].capitalize(), "services": my_strengths if my_strengths else ["Consultancy"]}
+            "me": {
+                "name": self.my_url.split('.')[1].capitalize() if '.' in self.my_url else "MyCompany", 
+                "services": my_strengths if my_strengths else ["Consultancy"],
+                "url": self.my_url
+            }
         }
 
 # --- 5. SIDEBAR (ADMIN VAULT) ---
@@ -134,12 +144,15 @@ with st.sidebar:
     st.title("🛡️ ADMIN VAULT")
     st.write("Private Database Access")
     admin_password = st.text_input("Enter Vault Password", type="password")
-    if admin_password == "admin123": # <--- CHANGE YOUR PASSWORD HERE
+    
+    # --- PASSWORD UPDATED HERE ---
+    if admin_password == "Sibin@8129110807": 
         st.success("Access Granted")
         st.subheader("Account Search History")
         history_df = get_vault_history()
         if not history_df.empty:
-            st.dataframe(history_df)
+            # Displays the exact columns requested: Date | Time | Target URL | My URL
+            st.dataframe(history_df, use_container_width=True, hide_index=True)
         else:
             st.write("No history found.")
     elif admin_password != "":
@@ -158,8 +171,8 @@ if st.button("Execute Strategic Audit"):
     with st.spinner("INITIATING DEEP SCAN..."):
         data = engine.analyze()
         if data:
-            # SAVE TO BACKEND
-            save_to_vault(data['target']['name'], data['target']['url'], data['me']['name'])
+            # --- SAVING URLS DIRECTLY TO DATABASE ---
+            save_to_vault(t_url, m_url)
     
     if data:
         # --- TOP KPI BAR ---
