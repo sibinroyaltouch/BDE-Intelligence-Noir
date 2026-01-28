@@ -21,22 +21,29 @@ from urllib.parse import urljoin
 
 # --- 2. ROBUST NAME EXTRACTION ---
 def get_clean_name(url):
-    """Extracts the actual brand name from a URL, handling various formats."""
+    """Extracts actual brand name (e.g., 'Google' instead of 'com')"""
     clean = re.sub(r'^https?://', '', url.lower())
     clean = re.sub(r'^www\.', '', clean)
     parts = clean.split('.')
     return parts[0].capitalize() if parts else "Entity"
 
-# --- 3. DATABASE LOGIC ---
+# --- 3. DATABASE LOGIC (WITH AUTO-FIX FOR OPERATIONAL ERRORS) ---
 def init_db():
     conn = sqlite3.connect('intelligence.db')
     c = conn.cursor()
+    # Check if the table has the correct columns. If not, reset it.
     try:
-        c.execute("SELECT target_url FROM history LIMIT 1")
+        c.execute("SELECT target_name, my_name FROM history LIMIT 1")
     except sqlite3.OperationalError:
+        # This part fixes your error by deleting the old incompatible table
         c.execute("DROP TABLE IF EXISTS history")
+        
     c.execute('''CREATE TABLE IF NOT EXISTS history 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, time TEXT, target_name TEXT, my_name TEXT)''')
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                  date TEXT, 
+                  time TEXT, 
+                  target_name TEXT, 
+                  my_name TEXT)''')
     conn.commit()
     conn.close()
 
@@ -70,7 +77,7 @@ st.markdown("""
     /* White text for global UI elements (Outside boxes) */
     h1, h2, h3, h4, p, label, span, div, .stMarkdown { color: #FFFFFF; }
 
-    /* The "Absolute" White Module (Everything inside is BLACK) */
+    /* White Modules (Everything inside is BLACK TEXT) */
     .white-module {
         background-color: #FFFFFF !important;
         padding: 40px;
@@ -96,19 +103,14 @@ st.markdown("""
         color: #000000 !important;
     }
 
-    /* KPI Grid - Mobile Friendly & High Contrast */
+    /* KPI Grid */
     .kpi-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 20px;
         margin-bottom: 40px;
     }
-    .kpi-card {
-        background-color: #FFFFFF !important;
-        padding: 25px;
-        text-align: center;
-        border-radius: 4px;
-    }
+    .kpi-card { background-color: #FFFFFF !important; padding: 25px; text-align: center; border-radius: 4px; }
     .kpi-card h4 { color: #000000 !important; font-size: 0.75rem !important; font-weight: 700 !important; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 10px 0 !important; }
     .kpi-card h2 { color: #000000 !important; font-size: 1.8rem !important; font-weight: 900 !important; margin: 0 !important; }
 
@@ -145,7 +147,7 @@ st.markdown("""
     }
     
     [data-testid="stSidebar"] { background-color: #111111 !important; color: white !important; }
-    .block-container { max-width: 1200px; padding-top: 3rem; margin: auto; }
+    .block-container { max-width: 1250px; padding-top: 3rem; margin: auto; }
     #MainMenu, footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
@@ -164,43 +166,33 @@ class TitanIntelligence:
             return {"html": res.text.lower(), "text": soup.get_text().lower(), "soup": soup}
         except: return None
 
-    def get_news(self, query):
-        url = f"https://news.google.com/rss/search?q={query}+when:7d&hl=en-US&gl=US&ceid=US:en"
-        try:
-            res = requests.get(url, timeout=5)
-            soup = BeautifulSoup(res.text, 'xml')
-            return [i.title.text for i in soup.find_all('item')[:3]]
-        except: return ["No recent market triggers identified."]
-
     def analyze(self):
         t_data = self.fetch(self.target_url)
         m_data = self.fetch(self.my_url)
         if not t_data or not m_data: return None
 
-        target_name = get_clean_name(self.target_url)
-        my_name = get_clean_name(self.my_url)
+        t_name = get_clean_name(self.target_url)
+        m_name = get_clean_name(self.my_url)
 
         # Scrape My Strengths
-        offer_map = {"Cloud Modernization": ["aws", "cloud", "devops"], "AI Engineering": ["ai", "machine"], "Cybersecurity": ["security", "soc"], "CRM Acceleration": ["salesforce", "hubspot"]}
+        offer_map = {"Cloud Integration": ["aws", "cloud", "devops"], "AI Engineering": ["ai", "automation"], "Cybersecurity": ["security", "soc"], "CRM Acceleration": ["salesforce", "hubspot"]}
         my_strengths = [k for k, v in offer_map.items() if any(x in m_data['text'] for x in v)]
         
-        # Tech Audit
         tech_list = ["Salesforce", "AWS", "HubSpot", "Zendesk", "Shopify", "WordPress", "Oracle", "SAP"]
         found_tech = [x for x in tech_list if x.lower() in t_data['html']]
         
-        weakness = "Growth Path Bottleneck"
-        if "wordpress" in t_data['html']: weakness = "Legacy Technical Debt (Critical)"
+        weakness = "Operational Fragmentation"
+        if "wordpress" in t_data['html']: weakness = "Legacy Framework Technical Debt"
 
         return {
             "target": {
-                "name": target_name,
+                "name": t_name,
                 "industry": "Enterprise Tech / SaaS" if "platform" in t_data['text'] else "Commercial Services",
                 "tech": found_tech,
-                "hiring": "Growth Mode" if "career" in t_data['html'] else "Steady State",
-                "weakness": weakness,
-                "news": self.get_news(target_name)
+                "hiring": "High Intensity" if "career" in t_data['html'] else "Stable",
+                "weakness": weakness
             },
-            "me": {"name": my_name, "services": my_strengths if my_strengths else ["Strategic Digital Modernization"]}
+            "me": {"name": m_name, "services": my_strengths if my_strengths else ["Digital Modernization"], "url": self.my_url}
         }
 
 # --- 6. SIDEBAR ADMIN ---
@@ -210,19 +202,19 @@ with st.sidebar:
     if admin_password == "Sibin@8129110807":
         st.success("Authorized")
         st.dataframe(get_vault_history())
-    elif admin_password != "": st.error("Invalid")
+    elif admin_password != "": st.error("Denied")
 
-# --- 7. DASHBOARD FRONTEND ---
-st.markdown("<h1 class='main-title'>ABI COMMAND NOIR</h1>", unsafe_allow_html=True)
-st.markdown("<p class='main-subtitle'>Enterprise Strategic War Room Dossier • Strategic Insight v23.0</p>", unsafe_allow_html=True)
+# --- 7. FRONTEND DASHBOARD ---
+st.markdown("<h1 style='text-align:center; letter-spacing:10px; font-weight:900;'>ABI COMMAND NOIR</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#666666;'>Enterprise Strategic War Room Dossier • v24.0</p>", unsafe_allow_html=True)
 
 col_a, col_b = st.columns(2)
-with col_a: target_input = st.text_input("TARGET URL", placeholder="e.g. google.com")
-with col_b: my_input = st.text_input("YOUR URL", placeholder="e.g. yourcompany.com")
+with col_a: t_url_input = st.text_input("TARGET URL", placeholder="e.g. apple.com")
+with col_b: m_url_input = st.text_input("YOUR URL", value="https://")
 
 if st.button("Initiate Strategic Audit"):
-    engine = TitanIntelligence(target_input, my_input)
-    with st.spinner("EXECUTING SECURE CRAWL..."):
+    engine = TitanIntelligence(t_url_input, m_url_input)
+    with st.spinner("INITIATING SECURE CRAWL..."):
         data = engine.analyze()
         if data: save_to_vault(data['target']['name'], data['me']['name'])
     
@@ -233,7 +225,7 @@ if st.button("Initiate Strategic Audit"):
                 <div class="kpi-card"><h4>Lead Status</h4><h2>High Priority</h2></div>
                 <div class="kpi-card"><h4>Target Account</h4><h2>{data['target']['name']}</h2></div>
                 <div class="kpi-card"><h4>Industry</h4><h2>{data['target']['industry']}</h2></div>
-                <div class="kpi-card"><h4>Vault</h4><h2>Secured</h2></div>
+                <div class="kpi-card"><h4>Vault</h4><h2>Logged</h2></div>
             </div>
         """, unsafe_allow_html=True)
 
@@ -241,58 +233,57 @@ if st.button("Initiate Strategic Audit"):
         st.markdown(f"""
             <div class="white-module">
                 <div class="module-title">Strategic Bridge: {data['me']['name']} → {data['target']['name']}</div>
-                <p><b>Executive Brief:</b> {data['target']['name']} is scaling during <b>{data['target']['hiring']}</b> but is currently hindered by <b>{data['target']['weakness']}</b>.</p>
+                <p><b>Executive Brief:</b> {data['target']['name']} is scaling during a <b>{data['target']['hiring']}</b> phase but is currently hindered by <b>{data['target']['weakness']}</b>.</p>
                 <p><b>Value Prop:</b> As <b>{data['me']['name']}</b> is an expert in <b>{data['me']['services'][0]}</b>, your strength is the direct solution to their weakness.</p>
             </div>
         """, unsafe_allow_html=True)
 
-        # --- MODULE 2: TARGET PROFILE ---
+        # --- MODULE 2: TARGET DOSSIER ---
         st.markdown('<div class="white-module">', unsafe_allow_html=True)
-        st.markdown('<div class="module-title">Account Intelligence Dossier</div>', unsafe_allow_html=True)
+        st.markdown('<div class="module-title">Target Intelligence Profile</div>', unsafe_allow_html=True)
         p1, p2 = st.columns(2)
         with p1:
             st.write(f"**Entity Name:** {data['target']['name']}")
-            st.write(f"**Market Sector:** {data['target']['industry']}")
-            st.write(f"**Hiring Profile:** {data['target']['hiring']}")
+            st.write(f"**Industry Vertical:** {data['target']['industry']}")
+            st.write(f"**Hiring Posture:** {data['target']['hiring']}")
         with p2:
-            st.write(f"**Internal Tech:** {', '.join(data['target']['tech']) if data['target']['tech'] else 'Custom Infrastructure'}")
+            st.write("**Internal Tech:** " + (", ".join(data['target']['tech']) if data['target']['tech'] else "Custom Infrastructure"))
             st.write(f"**Operational Gap:** {data['target']['weakness']}")
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # --- MODULE 3: SWOT & NEWS ---
+        # --- MODULE 3: SWOT ---
         st.markdown('<div class="white-module">', unsafe_allow_html=True)
-        st.markdown('<div class="module-title">SWOT & Market Sentiment</div>', unsafe_allow_html=True)
+        st.markdown('<div class="module-title">SWOT & Loophole Analysis</div>', unsafe_allow_html=True)
         s1, s2 = st.columns(2)
         with s1:
-            st.write(f"🟢 **[S] Strength:** Resilience in {data['target']['industry']} landscape.")
+            st.write(f"🟢 **[S] Strength:** Adoption of {data['target']['tech'][0] if data['target']['tech'] else 'digital systems'}.")
             st.write(f"🔴 **[W] Weakness:** {data['target']['weakness']}.")
         with s2:
             st.write(f"🔵 **[O] Opportunity:** Strategic integration with {data['me']['services'][0]}.")
             st.write(f"🟡 **[T] Threat:** Sector agile competitors scaling via modern digital frameworks.")
-        st.divider()
-        st.write("**Recent Strategic Triggers:**")
-        for n in data['target']['news']: st.write(f"• {n}")
         st.markdown('</div>', unsafe_allow_html=True)
 
         # --- MODULE 4: LINKEDIN RADAR ---
         st.markdown('<div class="white-module">', unsafe_allow_html=True)
         st.markdown('<div class="module-title">LinkedIn Stakeholder Radar</div>', unsafe_allow_html=True)
         st.write(f"Primary Decision Makers at **{data['target']['name']}**:")
-        roles = ["Chief Technology Officer", "VP Operations", "Head of Transformation", "COO"]
+        roles = ["Chief Technology Officer", "VP Operations", "Head of Digital Transformation", "COO"]
         r_cols = st.columns(4)
         for i, r in enumerate(roles):
-            q = urllib.parse.quote(f"{data['target']['name']} {r}")
-            r_cols[i].markdown(f'<a href="https://www.linkedin.com/search/results/people/?keywords={q}" target="_blank" style="color:blue!important; text-decoration:underline; font-weight:bold;">🔍 Search {r}</a>', unsafe_allow_html=True)
+            with r_cols[i]:
+                st.write(f"**{r}**")
+                q = urllib.parse.quote(f"{data['target']['name']} {r}")
+                st.markdown(f'<a href="https://www.linkedin.com/search/results/people/?keywords={q}" target="_blank" style="color:blue!important; text-decoration:underline; font-weight:bold;">🔍 Search {r}</a>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # --- MODULE 5: SALES PLAYBOOK ---
+        # --- MODULE 5: PLAYBOOK ---
         st.markdown('<div class="white-module">', unsafe_allow_html=True)
         st.markdown('<div class="module-title">Sales Execution Playbook</div>', unsafe_allow_html=True)
         
         st.write("**📧 Professional Email Hook**")
         st.markdown(f"""<div class="script-block">
-        Subject: Question regarding {data['target']['name']}'s {data['target']['hiring'].split()[0]} roadmap<br><br>
-        "Hi [Name], I noticed {data['target']['name']}'s recent scale. Usually, firms growing this fast while leveraging legacy tools hit a bottleneck with <b>{data['target']['weakness']}</b>. <br><br>
+        Subject: Question regarding {data['target']['name']}'s {data['target']['industry']} roadmap<br><br>
+        "Hi [Name], I noticed {data['target']['name']}'s recent scale. Usually, firms scaling this fast while leveraging legacy tools hit a bottleneck with <b>{data['target']['weakness']}</b>. <br><br>
         At <b>{data['me']['name']}</b>, we've helped similar firms bridge this gap. Do you have 2 minutes Tuesday?"
         </div>""", unsafe_allow_html=True)
         
